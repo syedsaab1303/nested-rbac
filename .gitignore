@@ -6,6 +6,7 @@ coverage
 
 .claude/
 
-# Local-only: personal reference / interview prep, not for the public repo
+# Local-only: personal reference / interview prep / marketing, not for the public repo
 PROJECT_NOTES.md
 example/
+marketing/

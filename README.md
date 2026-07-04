@@ -1,12 +1,21 @@
 # nested-rbac
 
-> Lightweight, **Zanzibar/ReBAC-inspired** hierarchical RBAC for **Express + TypeScript**.
+> Lightweight, **Zanzibar/ReBAC-inspired** hierarchical RBAC for **Node.js, Express & TypeScript**.
 > A role granted on a parent resource automatically applies to every child beneath it —
 > without the infrastructure of a full FGA engine.
 
+[![npm version](https://img.shields.io/npm/v/nested-rbac.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/nested-rbac)
+[![npm downloads](https://img.shields.io/npm/dm/nested-rbac.svg?color=cb3837)](https://www.npmjs.com/package/nested-rbac)
 [![CI](https://github.com/syedsaab1303/nested-rbac/actions/workflows/ci.yml/badge.svg)](https://github.com/syedsaab1303/nested-rbac/actions)
-[![npm](https://img.shields.io/npm/v/nested-rbac.svg)](https://www.npmjs.com/package/nested-rbac)
-![types](https://img.shields.io/badge/types-included-blue)
+[![minzipped size](https://img.shields.io/bundlephobia/minzip/nested-rbac?color=blue)](https://bundlephobia.com/package/nested-rbac)
+[![types included](https://img.shields.io/badge/types-included-blue)](https://www.typescriptlang.org/)
+[![license](https://img.shields.io/npm/l/nested-rbac.svg?color=blue)](./LICENSE)
+
+- 🌳 **Hierarchical** — grant a role once on a parent; it cascades to every descendant.
+- 🪶 **Tiny & zero-dependency** — pure logic you can drop into any Node app.
+- 🧩 **Framework-agnostic core** + an optional thin **Express** middleware.
+- 🔧 **Wildcards & deny rules** — `"billing:*"`, global `"*"`, and `"!action"` (deny always wins).
+- 🟦 **TypeScript-first** — full type declarations shipped; dual **ESM + CJS**.
 
 ## Why?
 
@@ -25,6 +34,40 @@ hierarchy.**
 Full Zanzibar-style engines (OpenFGA, SpiceDB, Permify) solve this at massive scale, but
 require a separate service and a relationship graph. `nested-rbac` captures the same core
 idea in a tiny, dependency-free library you can drop into any Node app.
+
+## How inheritance works
+
+To check a permission on a target, the engine gathers the target node **plus all of its
+ancestors**, then unions the permissions from any role assigned on any of those nodes:
+
+```
+organization "acme"   ← Priya is "owner" here
+        │
+      team "eng"
+        │
+   project "web"       ← Rahul is "editor" here
+        │
+    task "homepage"    ← check: can Rahul delete this?
+```
+
+Rahul was never assigned a role on the task itself — but `editor` on the parent `web`
+project **inherits down**, so he's allowed. Priya's org-level `owner` reaches every task
+in the whole tree. Nobody re-assigns roles at each level.
+
+## When should I use this?
+
+|                                       | Flat RBAC<br>(CASL, accesscontrol) | **nested-rbac**       | Zanzibar / FGA<br>(OpenFGA, SpiceDB) |
+| ------------------------------------- | ---------------------------------- | --------------------- | ------------------------------------ |
+| Resource-hierarchy inheritance        | ❌ do it by hand                    | ✅ built-in            | ✅ built-in                           |
+| Infrastructure                        | none (in-process)                  | **none (in-process)** | separate service + datastore         |
+| Setup cost                            | low                                | **low**               | high                                 |
+| Runtime dependencies                  | varies                             | **zero**              | client + server                      |
+| Cross-tree / graph relationships      | ❌                                  | ❌                     | ✅                                    |
+| Scale                                 | single app                         | single app            | billions of objects                  |
+| Best for                              | simple flat roles                  | **nested SaaS resources** | large-scale, complex relations   |
+
+**Sweet spot:** a multi-tenant app (`org → team → project → …`) that needs inheritance,
+but doesn't want to deploy and operate a full authorization service.
 
 ## Install
 
@@ -119,6 +162,10 @@ rbac.listPermissions(assignments, { type: "project", id: "P1" }, ancestors);
 // => { granted: ["billing:export", "project:read"], denied: ["billing:delete"] }
 ```
 
+> ⚠️ **Security note:** always enforce authorization on the server. `listPermissions`
+> is great for showing/hiding UI in your web or mobile client, but the real `can(...)`
+> check must run on your backend — never trust the client.
+
 ## Programmatic checks (no Express)
 
 ```ts
@@ -151,6 +198,12 @@ Returns an `authorize(rule)` factory producing Express middleware.
 | `getAncestors`   | `(resource) => ResourceRef[] \| Promise<...>`   | Resolve ancestor chain. Omit for flat checks. |
 | `onDenied`       | `(req, res) => void`                            | Custom `403` handler.                         |
 
+## Contributing
+
+Issues and PRs are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md). If `nested-rbac` is
+useful to you, a ⭐ on [GitHub](https://github.com/syedsaab1303/nested-rbac) helps others
+find it.
+
 ## License
 
-MIT
+MIT © [syedsaab1303](https://github.com/syedsaab1303)
