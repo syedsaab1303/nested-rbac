@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+*.log
+.DS_Store
+
+.claude/
+
+# Local-only: personal reference / interview prep, not for the public repo
+PROJECT_NOTES.md
+example/
