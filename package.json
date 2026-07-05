@@ -1,6 +1,6 @@
 {
   "name": "nested-rbac",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Lightweight, Zanzibar/ReBAC-inspired hierarchical RBAC for Express + TypeScript. A role granted on a parent resource automatically applies to its children — no heavy infrastructure.",
   "keywords": [
     "rbac",
