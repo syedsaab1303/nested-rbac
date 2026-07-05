@@ -1,6 +1,7 @@
 export { RBAC } from "./rbac.js";
 export type { ResolvedPermissions } from "./rbac.js";
 export { expressRBAC } from "./middleware.js";
+export { memoizeAncestors } from "./memoize.js";
 
 export type {
   Permission,

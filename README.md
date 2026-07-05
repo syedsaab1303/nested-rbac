@@ -177,6 +177,39 @@ rbac.can(
 ); // => boolean
 ```
 
+## Performance
+
+The `can()` check is pure in-memory set logic: it gathers the target plus its ancestors,
+unions the permissions from any matching assignment, and matches with `O(1)` set lookups.
+Hierarchy **depth barely matters** — it only adds a few entries to the ancestor array.
+
+Measured on Node 24 (`node benchmark/bench.mjs`):
+
+| Scenario                              | Throughput            |
+| ------------------------------------- | --------------------- |
+| depth 4, 1 assignment (inherited)     | ~1,360,000 checks/sec |
+| depth 12, 1 assignment (deep)         | ~1,070,000 checks/sec |
+| depth 4, 101 assignments              | ~196,000 checks/sec   |
+
+So the engine itself is never the bottleneck. **The real cost is the `getAncestors`
+lookup you supply**, which runs on every check. A naive resolver that walks one level per
+query turns a single check into N round-trips (a classic N+1). Instead:
+
+- Resolve the **whole chain in one query** — a recursive CTE (`WITH RECURSIVE …`), a
+  stored **materialized path** (`/org/team/project` on each row), or a **closure table**.
+- **Memoize per request** so repeated checks on related resources don't re-hit the DB.
+  The library ships a helper for this:
+
+```ts
+import { memoizeAncestors } from "nested-rbac";
+
+// Create a fresh cache per request (otherwise you risk stale hierarchy data).
+app.use((req, _res, next) => {
+  req.getAncestors = memoizeAncestors((r) => db.getAncestorChain(r));
+  next();
+});
+```
+
 ## API
 
 ### `new RBAC(options)`
@@ -197,6 +230,12 @@ Returns an `authorize(rule)` factory producing Express middleware.
 | `getAssignments` | `(req) => RoleAssignment[] \| Promise<...>`     | Read the caller's assignments.                |
 | `getAncestors`   | `(resource) => ResourceRef[] \| Promise<...>`   | Resolve ancestor chain. Omit for flat checks. |
 | `onDenied`       | `(req, res) => void`                            | Custom `403` handler.                         |
+
+### `memoizeAncestors(resolve)`
+
+Wraps a `getAncestors` resolver with a cache so repeated lookups for the same resource
+don't re-hit your database. Create one **per request** (or per batch job) to avoid stale
+data — see [Performance](#performance).
 
 ## Contributing
 
